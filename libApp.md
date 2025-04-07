@@ -1,29 +1,118 @@
-# libApp Project
+# GenerateNano SDK
 
 ## Overview
-libApp is a cross-platform library designed for efficient data processing and communication, particularly targeting Android and ARM architectures. It includes components for HTTP communication, BM25 indexing, and server functionality.
 
-## File Structure
-- **Android.mk**: Makefile for Android builds.
-- **Application.mk**: Android application configuration.
-- **CMakeLists.txt**: CMake configuration for cross-platform builds.
-- **Makefile**: Main Makefile for building the project.
-- **Makefile.android**: Makefile specifically for Android builds.
-- **Makefile.arm**: Makefile for ARM architecture builds.
-- **SOURCE/**: Contains the core source code files.
-- **android_http_client.cpp/h**: HTTP client implementation for Android.
-- **bm25.cpp/h**: BM25 algorithm implementation for indexing.
-- **lib_app_server.cpp/h**: Server implementation for the library.
-- **build_android.sh**: Script to build the project for Android.
-- **build_android_arm.sh**: Script to build the project for Android on ARM.
+The `GenerateNano.jar` SDK powers both **POS** and **Restaurant** applications by offering an all-in-one solution for:
+- Vector-based and traditional search (Graph, Semantic, BM25)
+- Portal initialization and communication
+- LLM (Large Language Model) integration with streaming and prompt-response support
 
-## Cross-Compilation
-Cross-compilation is handled using the Android NDK and CMake. The `build_android.sh` and `build_android_arm.sh` scripts automate the process for Android and ARM targets.
+This README explains the architecture, core modules, and how to use the SDK in a simple and practical way.
 
-## Build Instructions
-1. **Android Build**: Run `./build_android.sh`.
-2. **Android ARM Build**: Run `./build_android_arm.sh`.
-3. **General Build**: Use `make` with the appropriate Makefile.
+---
 
-## Usage
-Include the library in your project and use the provided APIs for HTTP communication, BM25 indexing, and server functionality.
+## Applications Supported
+
+- **POS App**: Customer checkout, billing, item scanning, etc.
+- **Restaurant App**: Menu handling, order processing, table tracking, etc.
+
+---
+
+## What’s Inside `GenerateNano.jar`
+
+| Module/File               | Description                                         |
+|--------------------------|-----------------------------------------------------|
+| `graph.jar`              | Enables graph-based search                         |
+| `semantic_search.jar`    | Adds context-aware, semantic search                |
+| `bm25.jar`               | Traditional keyword-based search using BM25        |
+| `portal.jar`             | Handles communication with external APIs or portals|
+| `interplay_interface.so` | Connects to LLM models (also referred to as `libllama.so`) |
+
+---
+
+## Core Functions
+
+### 1. LLM Functions
+
+- `generateStartLLM(llm, streaming_function)`  
+  Starts LLM in streaming mode.
+
+- `generateInitLLM(context, mlock, config)`  
+  Initializes LLM with memory locking and context setup.
+
+- `generateLLMResponse(prompt)`  
+  Gets a response from the LLM for the given prompt.
+
+---
+
+### 2. Vector Database Functions
+
+- `generateInitVDB(path, search_type)`  
+  Initializes the VDB with Graph / BM25 / Semantic type.
+
+- `generateSearchVDB(vdb, query)`  
+  Executes a search on the initialized VDB.
+
+---
+
+### 3. Portal Communication Functions
+
+- `generatePortalInit(portal_ip_settings)`  
+  Initializes communication with the remote portal using IP/config.
+
+- `generatePortalSend(config, path)`  
+  Sends data or instructions to the portal.
+
+---
+
+## Architecture Diagram
+
+```
+POS App       Restaurant App
+     \             //
+    [ Uses GenerateNano.jar SDK ]
+               |
+  ---------------------------------------
+ | Search Modules       |  Portal Module |  LLM Interface |
+ | - graph.jar          |  - portal.jar  |  - libllama.so |
+ | - bm25.jar           |                |                |
+ | - semantic_search.jar|                |                |
+  ---------------------------------------
+               |
+        [ Exposed SDK Functions ]
+        - generateInitLLM
+        - generateStartLLM
+        - generateLLMResponse
+        - generateInitVDB
+        - generateSearchVDB
+        - generatePortalInit
+        - generatePortalSend
+```
+
+---
+
+## How to Use
+
+1. Import `GenerateNano.jar` and required `.jar` and `.so` files in your app.
+2. Initialize components:
+   - Call `generateInitLLM` to setup LLM
+   - Call `generateInitVDB` to load the vector database
+   - Call `generatePortalInit` to connect the app to your portal
+3. Use runtime methods:
+   - `generateLLMResponse()` for dynamic responses
+   - `generateSearchVDB()` for search results
+   - `generatePortalSend()` to send data to external systems
+
+---
+
+## Notes
+
+- All search types (Graph, Semantic, BM25) are pluggable.
+- LLM uses a native `.so` file (`interplay_interface.so`) to interface directly with system-level models like LLaMA.
+- Keep configuration paths consistent for portability.
+
+---
+
+## Support
+
+For integration help or bug reports, contact your internal SDK team.
