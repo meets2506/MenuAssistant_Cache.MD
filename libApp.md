@@ -113,6 +113,4 @@ POS App       Restaurant App
 
 ---
 
-## Support
 
-For integration help or bug reports, contact your internal SDK team.
