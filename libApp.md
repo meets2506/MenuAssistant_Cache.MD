@@ -114,6 +114,125 @@ For graph search with no direct Q&A matches (fallback):
 }
 ```
 
+## Detailed Graph Architecture
+
+### Document to Graph Conversion
+
+```
+┌────────────────┐     ┌────────────────┐     ┌────────────────┐
+│                │     │                │     │                │
+│  Raw Documents │────▶│  Text Parser   │────▶│  Tokenization  │
+│  (.txt files)  │     │  & Chunking    │     │  & Embedding   │
+│                │     │                │     │                │
+└────────────────┘     └────────────────┘     └────────┬───────┘
+                                                        │
+                                                        ▼
+┌────────────────┐     ┌────────────────┐     ┌────────────────┐
+│                │     │                │     │                │
+│  Graph Storage │◀────│  Edge Creation │◀────│  Node Creation │
+│  (Index)       │     │  & Weighting   │     │  (Doc Chunks)  │
+│                │     │                │     │                │
+└────────────────┘     └────────────────┘     └────────────────┘
+```
+
+### Graph Structure
+
+1. **Nodes**:
+   - Each document is split into smaller chunks (100-200 words)
+   - Each chunk becomes a node in the graph
+   - Nodes store:
+     * Original text content
+     * Document source information
+     * Semantic embedding vector
+     * Type classification (Q&A pair, factual text, procedure, etc.)
+
+2. **Edges**:
+   - Connections between related nodes
+   - Types of edges:
+     * **Same-document edges**: Connect chunks from the same document (stronger weight)
+     * **Semantic similarity edges**: Connect semantically related chunks across documents
+     * **Reference edges**: Connect chunks that explicitly reference each other
+   - Edge weights are determined by:
+     * Semantic similarity score (0.0-1.0)
+     * Proximity in original document
+     * Type of relationship
+
+3. **Index Structure**:
+   - Efficient lookup table mapping semantic concepts to nodes
+   - Vector space for similarity comparisons
+   - Metadata index for filtering by document type or source
+
+### Search Process
+
+```
+                           ┌───────────────┐
+                           │               │
+                           │  User Query   │
+                           │               │
+                           └───────┬───────┘
+                                   │
+                                   ▼
+┌────────────────┐     ┌────────────────┐     ┌────────────────┐
+│                │     │                │     │                │
+│  Query         │────▶│  Find Seed     │────▶│  Graph         │
+│  Embedding     │     │  Nodes         │     │  Traversal     │
+│                │     │                │     │                │
+└────────────────┘     └────────────────┘     └────────┬───────┘
+                                                        │
+                                                        ▼
+┌────────────────┐     ┌────────────────┐     ┌────────────────┐
+│                │     │                │     │                │
+│  Response      │◀────│  Rank Results  │◀────│  Extract       │
+│  Generation    │     │  by Relevance  │     │  Subgraph      │
+│                │     │                │     │                │
+└────────────────┘     └────────────────┘     └────────────────┘
+```
+
+### How the Search Works
+
+1. **Document Processing** (during index building):
+   - Text documents are parsed and cleaned
+   - Documents are split into smaller overlapping chunks
+   - Each chunk is converted to a semantic vector using embeddings
+   - Chunks are analyzed to identify Q&A pairs, important facts, procedures
+   - The graph is constructed by creating nodes for each chunk and edges for relationships
+
+2. **Query Processing** (when search is performed):
+   - The user query is converted to a semantic vector
+   - The system finds "seed nodes" that are most similar to the query vector
+   - The graph is traversed starting from these seed nodes, following edges
+   - A relevance score is calculated for each node encountered
+   - The most relevant nodes are collected as search results
+
+3. **Special Q&A Handling**:
+   - Nodes containing Q&A pairs get special treatment
+   - The similarity between the query and question part is calculated
+   - If similarity exceeds a threshold (0.25) or keywords match, the answer is returned directly
+
+4. **Fallback Mechanism**:
+   - If no direct Q&A match is found, the top relevant nodes are summarized
+   - The system extracts the most important information from each node
+   - The snippets are presented with their document sources
+
+### Simple Example
+
+Imagine you have three documents:
+1. A document about "Payment Terminal Setup" with steps
+2. A document with "Common Payment Questions" in Q&A format
+3. A document about "Refund Policies"
+
+When these are processed into the graph:
+- Each becomes multiple nodes (chunks of text)
+- Nodes within each document are connected strongly
+- Nodes about similar topics across documents are connected based on semantic similarity
+- Q&A sections are specially marked
+
+When a user asks "How do I process a refund?":
+1. The query is converted to a vector
+2. The system finds nodes in the "Refund Policies" document and related Q&A nodes
+3. If there's a Q&A node with a question similar to "How do I process a refund?", its answer is returned
+4. If not, the most relevant snippets from the refund policy and related documents are summarized
+
 ## Benefits Over BM25
 
 1. **Semantic Understanding**: Graph search understands query meaning, not just keywords
